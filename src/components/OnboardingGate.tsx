@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Phone, Calendar, CreditCard, Shield,
-  CheckCircle2, AlertCircle, ArrowRight, Lock,
+  AlertCircle, ArrowRight,
   Zap, Building2, Check, ExternalLink
 } from 'lucide-react';
 

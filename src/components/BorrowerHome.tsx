@@ -4,7 +4,7 @@ import {
   Zap, Bell, LogOut, ChevronRight, ArrowRight,
   Car, FileText, TrendingUp, Shield, Clock,
   CheckCircle2, AlertCircle, Sparkles, User,
-  CreditCard, BarChart3, Star, Upload
+  CreditCard, BarChart3, Star
 } from 'lucide-react';
 import type { SanctionedApp } from '../types/journey';
 import { formatINR } from '../types/journey';

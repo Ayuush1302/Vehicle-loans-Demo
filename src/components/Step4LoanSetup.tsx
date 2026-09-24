@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
+import { motion, useMotionValue, animate } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, CheckCircle2, FileText,
   Upload, X, Sparkles, Copy, Download,
@@ -52,7 +52,6 @@ function RangeSlider({
   step?: number;
 }) {
   const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
-  const accentColor = 'var(--color-theme-accent)';
 
   return (
     <div>
@@ -181,7 +180,7 @@ function DocDropzone({ label, hint, required }: { label: string; hint: string; r
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function Step4Sanction({ valuation, userName, onComplete, onBack }: Step4SanctionProps) {
+export default function Step4Sanction({ valuation, userName: _userName, onComplete, onBack }: Step4SanctionProps) {
   const { maxLoanAmount, maxTenureMonths, interestRate, condition, vehicleType, vehicleData } = valuation;
 
   const [loanAmount, setLoanAmount] = useState(Math.round(maxLoanAmount * 0.8));

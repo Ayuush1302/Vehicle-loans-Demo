@@ -54,6 +54,16 @@ export interface SanctionedApp {
   sanctionDate: string;
 }
 
+export interface Application {
+  id: string;
+  status: 'Draft' | 'Submitted' | 'Sanctioned' | 'Approved' | 'Declined';
+  lastUpdated?: number;
+  mobileNumber?: string;
+  vehicleData?: VehicleData;
+  sanctionedApp?: SanctionedApp;
+}
+
+
 export function formatINR(n: number): string {
   return '₹' + Math.round(n).toLocaleString('en-IN');
 }

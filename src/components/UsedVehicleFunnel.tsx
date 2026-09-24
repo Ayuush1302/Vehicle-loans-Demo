@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, Search, CheckCircle2, AlertCircle, ChevronDown,
+  Zap, Search, CheckCircle2, AlertCircle,
   Car, Fuel, Calendar, Shield, Hash
 } from 'lucide-react';
 import { vahanData } from '../data/vehicleData';

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, ChevronDown, X, Info,
+  MapPin, X, Info,
   Car, Fuel, Tag, Layers,
   CheckCircle2
 } from 'lucide-react';
