@@ -4,13 +4,14 @@ import { ChevronDown, ChevronUp, Download, FileText, Smartphone, CreditCard, Arr
 import type { SanctionedApp } from '../types/journey';
 import { formatINR } from '../types/journey';
 
-interface Step6SanctionLetterProps {
+interface Step7OfferAndKFSProps {
   sanction: SanctionedApp;
+  userName: string;
   onComplete: () => void;
   onBack: () => void;
 }
 
-export default function Step6SanctionLetter({ sanction, onComplete, onBack }: Step6SanctionLetterProps) {
+export default function Step7OfferAndKFS({ sanction, userName, onComplete, onBack }: Step7OfferAndKFSProps) {
   const [kfsExpanded, setKfsExpanded] = useState(false);
   const [kfsRead, setKfsRead] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -282,6 +283,12 @@ export default function Step6SanctionLetter({ sanction, onComplete, onBack }: St
             <div>
               <h4 className="font-bold text-theme-primary text-base">Setup Auto-Debit (e-NACH)</h4>
               <p className="text-sm text-theme-secondary mt-0.5">First EMI: {formatDate(firstEmiDate)}</p>
+              
+              <div className="mt-3 bg-theme-bg/50 border border-theme-border/50 rounded p-2.5">
+                <p className="text-[10px] font-bold text-theme-secondary font-mono uppercase tracking-widest mb-1">Borrower's Bank Details</p>
+                <p className="text-xs text-theme-primary font-bold">{userName}</p>
+                <p className="text-xs text-theme-secondary font-mono">HDFC Bank •••• 4021</p>
+              </div>
             </div>
           </div>
           <button

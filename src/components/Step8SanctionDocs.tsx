@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Copy, Download, FileText, Upload, X, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Copy, Download, FileText, Upload, X, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { SanctionedApp } from '../types/journey';
 import { formatINR } from '../types/journey';
 
-interface Step7SanctionDocsProps {
+interface Step8SanctionDocsProps {
   sanction: SanctionedApp;
   onComplete: () => void;
+  onBack: () => void;
 }
 
 // ── Confetti burst (CSS-only) ──────────────────────────────────
@@ -106,7 +107,7 @@ function DocDropzone({ label, hint, required, onFileChange }: { label: string; h
   );
 }
 
-export default function Step7SanctionDocs({ sanction, onComplete }: Step7SanctionDocsProps) {
+export default function Step8SanctionDocs({ sanction, onComplete, onBack }: Step8SanctionDocsProps) {
   const [copied, setCopied] = useState(false);
   const [docs, setDocs] = useState<Record<string, boolean>>({});
 
@@ -272,15 +273,25 @@ export default function Step7SanctionDocs({ sanction, onComplete }: Step7Sanctio
           </div>
         </motion.div>
 
-        {/* Submit Documents Button */}
+        {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-          className="pt-2"
+          className="pt-2 flex items-center gap-3"
         >
+          <motion.button
+            onClick={onBack}
+            whileHover={{ x: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center justify-center gap-2 px-6 py-4 rounded border border-theme-border bg-theme-elevated hover:bg-theme-card text-theme-primary font-bold text-xs uppercase tracking-widest transition-colors flex-shrink-0"
+          >
+            <ArrowLeft size={14} />
+            Back
+          </motion.button>
+          
           <button
             onClick={onComplete}
             disabled={!allUploaded}
-            className={`w-full py-4 rounded font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors duration-300 ${
+            className={`flex-1 py-4 rounded font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors duration-300 ${
               allUploaded
                 ? 'bg-theme-accent hover:bg-[#256639] text-theme-primary'
                 : 'bg-theme-card border border-theme-border text-theme-muted cursor-not-allowed'
@@ -289,12 +300,13 @@ export default function Step7SanctionDocs({ sanction, onComplete }: Step7Sanctio
             Submit Documents
             <ArrowRight size={14} />
           </button>
-          {!allUploaded && (
-            <p className="text-center text-[10px] font-mono text-theme-secondary mt-3">
-              Please upload all required documents to proceed.
-            </p>
-          )}
         </motion.div>
+        
+        {!allUploaded && (
+          <p className="text-center text-[10px] font-mono text-theme-secondary mt-1">
+            Please upload all required documents to proceed.
+          </p>
+        )}
 
         <p className="text-center text-[10px] font-mono text-theme-muted pb-2">
           © 2024 Crux Auto Finance Pvt. Ltd. — Sanction subject to final approval.

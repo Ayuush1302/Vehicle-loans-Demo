@@ -158,7 +158,7 @@ export default function Step5ApplicantDetails({ sanctionedApp: _sanctionedApp, u
         <div className="rounded-lg border border-theme-border bg-theme-card overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-4 border-b border-theme-border bg-theme-elevated">
             <Building size={14} className="text-theme-primary" />
-            <span className="text-[11px] font-bold text-theme-primary uppercase tracking-widest">Bank Details</span>
+            <span className="text-[11px] font-bold text-theme-primary uppercase tracking-widest">Borrower's Bank Details (For Mandate & Analysis)</span>
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

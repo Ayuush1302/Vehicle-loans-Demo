@@ -6,9 +6,10 @@ import Step2VehicleDetails from './Step2VehicleDetails';
 import Step3Valuation from './Step3Valuation';
 import Step4Sanction from './Step4LoanSetup';
 import Step5ApplicantDetails from './Step5ApplicantDetails';
-import Step6SanctionLetter from './Step6SanctionLetter';
-import Step7SanctionDocs from './Step7SanctionDocs';
-import Step8ApplicationSuccess from './Step8ApplicationSuccess';
+import Step6SellerDetails from './Step6SellerDetails';
+import Step7OfferAndKFS from './Step7OfferAndKFS';
+import Step8SanctionDocs from './Step8SanctionDocs';
+import Step9ApplicationSuccess from './Step9ApplicationSuccess';
 import type { VehicleType, Condition, VehicleData, ValuationResult, SanctionedApp } from '../types/journey';
 
 interface VehicleJourneyProps {
@@ -79,6 +80,10 @@ export default function VehicleJourney({ onBack, onSanctioned, userName }: Vehic
   };
 
   const handleStep8Complete = () => {
+    navigateTo(9);
+  };
+
+  const handleStep9Complete = () => {
     if (sanctionedApp) {
       onSanctioned(sanctionedApp);
     }
@@ -196,7 +201,7 @@ export default function VehicleJourney({ onBack, onSanctioned, userName }: Vehic
                 exit="exit"
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
               >
-                <Step6SanctionLetter
+                <Step6SellerDetails
                   sanction={sanctionedApp}
                   onComplete={handleStep6Complete}
                   onBack={() => navigateTo(5)}
@@ -213,9 +218,11 @@ export default function VehicleJourney({ onBack, onSanctioned, userName }: Vehic
                 exit="exit"
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
               >
-                <Step7SanctionDocs
+                <Step7OfferAndKFS
                   sanction={sanctionedApp}
+                  userName={userName}
                   onComplete={handleStep7Complete}
+                  onBack={() => navigateTo(6)}
                 />
               </motion.div>
             )}
@@ -229,9 +236,26 @@ export default function VehicleJourney({ onBack, onSanctioned, userName }: Vehic
                 exit="exit"
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
               >
-                <Step8ApplicationSuccess
+                <Step8SanctionDocs
                   sanction={sanctionedApp}
                   onComplete={handleStep8Complete}
+                  onBack={() => navigateTo(7)}
+                />
+              </motion.div>
+            )}
+
+            {currentStep === 9 && sanctionedApp && (
+              <motion.div
+                key="step9"
+                variants={variants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <Step9ApplicationSuccess
+                  sanction={sanctionedApp}
+                  onComplete={handleStep9Complete}
                 />
               </motion.div>
             )}
