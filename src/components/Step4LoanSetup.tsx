@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, FileText,
-  Upload, X, Sparkles, Copy, Download,
-  DollarSign, Calendar, TrendingDown, Percent,
-  ChevronRight, Home
+  ArrowLeft, ArrowRight, Sparkles,
+  DollarSign, Calendar, TrendingDown, Percent
 } from 'lucide-react';
 import type { ValuationResult, SanctionedApp } from '../types/journey';
 import { formatINR, calcEMI, genRefNumber } from '../types/journey';
@@ -82,7 +80,7 @@ function RangeSlider({
         />
         {/* Thumb */}
         <div
-          className="absolute w-5 h-5 rounded-sm border-2 border-theme-primary shadow-sm pointer-events-none transition-all duration-100 bg-theme-card"
+          className="absolute w-5 h-5 rounded-full border-2 border-theme-primary shadow-sm pointer-events-none transition-all duration-100 bg-theme-bg"
           style={{ left: `calc(${pct}% - 10px)`, zIndex: 1 }}
         />
       </div>
@@ -94,101 +92,18 @@ function RangeSlider({
   );
 }
 
-// ── Confetti burst (CSS-only) ──────────────────────────────────
-function ConfettiBurst() {
-  const particles = Array.from({ length: 32 }, (_, i) => ({
-    id: i,
-    color: ['var(--color-theme-accent)', 'var(--color-theme-primary)', 'var(--color-theme-secondary)', 'var(--color-theme-muted)'][i % 4],
-    x: (Math.random() - 0.5) * 600,
-    y: -(Math.random() * 400 + 100),
-    rotate: Math.random() * 720 - 360,
-    scale: Math.random() * 0.8 + 0.4,
-    delay: Math.random() * 0.3,
-  }));
 
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center overflow-hidden">
-      {particles.map(p => (
-        <motion.div
-          key={p.id}
-          initial={{ x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 }}
-          animate={{ x: p.x, y: p.y, rotate: p.rotate, scale: p.scale, opacity: 0 }}
-          transition={{ duration: 1.8, delay: p.delay, ease: 'easeOut' }}
-          className="absolute w-3 h-3 rounded-sm"
-          style={{ backgroundColor: p.color }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Doc Dropzone ───────────────────────────────────────────────
-function DocDropzone({ label, hint, required }: { label: string; hint: string; required?: boolean }) {
-  const [file, setFile] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f) setFile(f.name);
-  };
-
-  return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={e => e.preventDefault()}
-      onClick={() => !file && inputRef.current?.click()}
-      className={`relative rounded border border-dashed p-4 transition-colors duration-200 cursor-pointer group ${
-        file
-          ? 'border-theme-accent/50 bg-theme-accent/10'
-          : 'border-theme-muted hover:border-theme-primary bg-theme-elevated hover:bg-theme-card'
-      }`}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        className="sr-only"
-        accept=".pdf,.jpg,.jpeg,.png"
-        onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0].name); }}
-      />
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 border ${
-          file ? 'bg-theme-accent/20 border-theme-accent/30' : 'bg-theme-bg border-theme-border'
-        }`}>
-          {file
-            ? <CheckCircle2 size={14} className="text-theme-accent" />
-            : <Upload size={14} className="text-theme-secondary group-hover:text-theme-primary transition-colors" />
-          }
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={`text-[11px] font-bold ${file ? 'text-theme-accent' : 'text-theme-primary'}`}>
-            {label} {required && <span className="text-amber-500">*</span>}
-          </p>
-          <p className="text-[10px] font-mono text-theme-secondary truncate mt-0.5">{file ? file : hint}</p>
-        </div>
-        {file && (
-          <button
-            onClick={e => { e.stopPropagation(); setFile(null); }}
-            className="w-6 h-6 rounded bg-theme-elevated border border-theme-border hover:border-red-500/50 hover:bg-red-950/20 flex items-center justify-center transition-colors"
-          >
-            <X size={11} className="text-theme-secondary" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Main Component ─────────────────────────────────────────────
 export default function Step4Sanction({ valuation, userName: _userName, onComplete, onBack }: Step4SanctionProps) {
   const { maxLoanAmount, maxTenureMonths, interestRate, condition, vehicleType, vehicleData } = valuation;
 
-  const [loanAmount, setLoanAmount] = useState(Math.round(maxLoanAmount * 0.8));
-  const [tenure, setTenure] = useState(Math.min(maxTenureMonths, vehicleType === '4W' ? 60 : 36));
-  const [accepted, setAccepted] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [sanction, setSanction] = useState<SanctionedApp | null>(null);
-  const [copied, setCopied] = useState(false);
+  const actualMinLoan = Math.min(MIN_LOAN, maxLoanAmount);
+  const actualMinTenure = Math.min(6, maxTenureMonths);
+
+  const [loanAmount, setLoanAmount] = useState(maxLoanAmount);
+  const [tenure, setTenure] = useState(maxTenureMonths);
+
 
   const emi = calcEMI(loanAmount, interestRate, tenure);
   const downPayment = valuation.baseValue - loanAmount;
@@ -208,189 +123,13 @@ export default function Step4Sanction({ valuation, userName: _userName, onComple
       condition,
       sanctionDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
     };
-    setSanction(app);
-    setAccepted(true);
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
+    onComplete(app);
   };
 
-  const handleCopy = useCallback(() => {
-    if (sanction) {
-      navigator.clipboard.writeText(sanction.refNumber).catch(() => {});
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }
-  }, [sanction]);
-
-  const isUsed = condition === 'used';
   const vehicleName = `${vehicleData.make} ${vehicleData.model}`;
   const typeLabel = vehicleType === '2W' ? 'Two-Wheeler' : 'Four-Wheeler';
 
-  if (accepted && sanction) {
-    return (
-      <>
-        {showConfetti && <ConfettiBurst />}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.25 }}
-          className="space-y-6 max-w-2xl mx-auto py-8 font-sans"
-          style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-        >
-          {/* Success hero */}
-          <div className="text-center py-6">
-            <motion.div
-              initial={{ scale: 0, rotate: -15 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', bounce: 0.5, delay: 0.1 }}
-              className="w-16 h-16 rounded border border-theme-accent/30 bg-theme-accent/10 flex items-center justify-center mx-auto mb-5"
-            >
-              <CheckCircle2 size={24} className="text-theme-accent" />
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-2xl sm:text-3xl font-bold text-theme-primary tracking-tight"
-            >
-              Sanction Letter Generated
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-theme-secondary text-sm mt-2"
-            >
-              Your pre-sanction offer for <span className="text-theme-primary font-bold">{vehicleName}</span> is ready.
-            </motion.p>
-          </div>
 
-          {/* Sanction letter card */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="rounded-lg border border-theme-border bg-theme-card overflow-hidden"
-          >
-            <div className="h-1 w-full bg-theme-accent" />
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="text-[10px] font-bold text-theme-secondary font-mono uppercase tracking-widest">Reference Number</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-lg font-bold font-mono text-theme-primary">
-                      {sanction.refNumber}
-                    </span>
-                    <button
-                      onClick={handleCopy}
-                      className="w-6 h-6 rounded bg-theme-elevated border border-theme-border hover:border-theme-primary flex items-center justify-center transition-colors"
-                      title="Copy reference"
-                    >
-                      {copied ? <CheckCircle2 size={11} className="text-theme-accent" /> : <Copy size={11} className="text-theme-secondary" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-theme-secondary font-mono uppercase tracking-widest">Date</p>
-                  <p className="text-xs font-bold font-mono text-theme-primary mt-1">{sanction.sanctionDate}</p>
-                </div>
-              </div>
-
-              {/* Loan summary grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5">
-                {[
-                  { label: 'Sanctioned Amount', value: formatINR(sanction.loanAmount), green: true },
-                  { label: 'Monthly EMI', value: formatINR(sanction.emi), green: true },
-                  { label: 'Tenure', value: `${sanction.tenureMonths} Months` },
-                  { label: 'Interest Rate', value: `${interestRate}% p.a.` },
-                  { label: 'Processing Fee', value: formatINR(processingFee) },
-                  { label: 'Asset', value: vehicleName },
-                ].map(({ label, value, green }) => (
-                  <div key={label} className={`rounded p-3 border ${
-                    green
-                      ? 'bg-theme-accent/10 border-theme-accent/30'
-                      : 'bg-theme-elevated border-theme-border'
-                  }`}>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-theme-secondary">{label}</p>
-                    <p className={`text-xs font-bold font-mono mt-1 ${green ? 'text-theme-accent' : 'text-theme-primary'}`}>
-                      {value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Download mock */}
-              <button className="w-full flex items-center justify-center gap-2 py-3 rounded border border-theme-border bg-theme-elevated hover:bg-theme-bg hover:border-theme-primary text-theme-primary text-xs font-bold uppercase tracking-widest transition-colors">
-                <Download size={14} />
-                Download Sanction Letter (PDF)
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Document Checklist */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="rounded-lg border border-theme-border bg-theme-card overflow-hidden"
-          >
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-theme-border bg-theme-elevated">
-              <FileText size={13} className="text-theme-primary" />
-              <span className="text-[11px] font-bold text-theme-primary uppercase tracking-widest">
-                Required Documents
-              </span>
-            </div>
-            <div className="p-4 space-y-3">
-              {/* Common docs */}
-              <DocDropzone label="PAN Card (Both Sides)" hint="PDF or Image · Max 5 MB" required />
-              <DocDropzone label="Address Proof (Aadhaar / Utility Bill)" hint="PDF or Image · Max 5 MB" required />
-              <DocDropzone label="Last 3 Months Bank Statement" hint="PDF format preferred" required />
-              {/* Condition-specific docs */}
-              {isUsed ? (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-[10px] font-bold font-mono text-theme-secondary uppercase tracking-widest">Used Vehicle Docs</p>
-                  </div>
-                  <DocDropzone label="RC Copy (Registration Certificate)" hint="Front + Back · PDF or Image" required />
-                  <DocDropzone label="Valid Insurance Certificate" hint="Current year policy · PDF" required />
-                  <DocDropzone label="Form 35 (NOC from Previous Lender)" hint="If hypothecation exists" />
-                </>
-              ) : (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-[10px] font-bold font-mono text-theme-secondary uppercase tracking-widest">New Vehicle Docs</p>
-                  </div>
-                  <DocDropzone label="Dealer Proforma Invoice" hint="From authorised dealership · PDF" required />
-                  <DocDropzone label="Booking Receipt / Allotment Letter" hint="PDF or Image" />
-                </>
-              )}
-
-              <p className="text-[10px] text-theme-muted pt-2 text-center font-mono">
-                * Documents verified in 2–4 hours. Disbursement follows physical inspection.
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Return to Dashboard */}
-          <motion.button
-            id="return-dashboard-btn"
-            onClick={() => onComplete(sanction)}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-            className="w-full py-4 rounded bg-theme-primary hover:bg-white text-theme-bg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors"
-          >
-            <Home size={14} />
-            Return to Dashboard
-            <ChevronRight size={14} />
-          </motion.button>
-
-          <p className="text-center text-[10px] font-mono text-theme-muted pb-2">
-            © 2024 Crux Auto Finance Pvt. Ltd. — Sanction subject to final approval.
-          </p>
-        </motion.div>
-      </>
-    );
-  }
 
   return (
     <motion.div
@@ -437,9 +176,9 @@ export default function Step4Sanction({ valuation, userName: _userName, onComple
               <RangeSlider
                 id="loan-amount-slider"
                 label="Loan Amount"
-                min={MIN_LOAN}
+                min={actualMinLoan}
                 max={maxLoanAmount}
-                step={10000}
+                step={1000}
                 value={loanAmount}
                 onChange={setLoanAmount}
                 formatFn={formatINR}
@@ -463,7 +202,7 @@ export default function Step4Sanction({ valuation, userName: _userName, onComple
             <RangeSlider
               id="tenure-slider"
               label="Tenure (Months)"
-              min={6}
+              min={actualMinTenure}
               max={maxTenureMonths}
               step={6}
               value={tenure}
@@ -566,7 +305,7 @@ export default function Step4Sanction({ valuation, userName: _userName, onComple
             className="flex items-center gap-2.5 px-6 py-4 rounded bg-theme-primary hover:bg-white text-theme-bg font-bold text-xs uppercase tracking-widest transition-colors flex-shrink-0 whitespace-nowrap"
           >
             <Sparkles size={14} />
-            Generate Sanction Letter
+            Proceed to Applicant Details
             <ArrowRight size={14} />
           </motion.button>
         </div>

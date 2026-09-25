@@ -27,11 +27,7 @@ const SCAN_STEPS = [
   'Calculating Residual Asset Value...',
 ];
 
-const ODOMETER_OPTIONS = [
-  { id: 'lt30', label: '< 30,000 km' },
-  { id: '30-60', label: '30k – 60k km' },
-  { id: 'gt60', label: '60k+ km' },
-];
+
 
 // ── Used Vehicle Sub-Form ──────────────────────────────────────
 function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
@@ -44,13 +40,21 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
   const [scanStep, setScanStep] = useState(0);
   const [vehicleData, setVehicleData] = useState<typeof vahanData[string] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
   const [selectedVariant, setSelectedVariant] = useState('');
-  const [selectedOdometer, setSelectedOdometer] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [odometer, setOdometer] = useState('');
+  const [insuranceDate, setInsuranceDate] = useState('');
+  const [hypothecation, setHypothecation] = useState<'Clear' | 'Active'>('Clear');
 
-  const isReady = !!(vehicleData && selectedVariant && selectedOdometer);
+  const isReady = !!(vehicleData && selectedVariant && purchasePrice && odometer && insuranceDate);
   useEffect(() => { onReady(isReady); }, [isReady]);
+
   useEffect(() => {
-    if (vehicleData && selectedVariant && selectedOdometer) {
+    if (vehicleData && selectedVariant && purchasePrice && odometer && insuranceDate) {
+      const odoNum = parseInt(odometer) || 0;
+      const band = odoNum < 30000 ? 'lt30' : odoNum < 60000 ? '30-60' : 'gt60';
+      
       onDataChange({
         kind: 'used',
         make: vehicleData.make,
@@ -59,14 +63,17 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
         fuelType: vehicleData.fuelType,
         color: vehicleData.color,
         engineCC: vehicleData.engineCC,
-        hypothecation: vehicleData.hypothecation,
+        hypothecation: hypothecation,
         variant: selectedVariant,
-        odometerBand: selectedOdometer as 'lt30' | '30-60' | 'gt60',
+        odometerBand: band,
+        purchasePrice: parseInt(purchasePrice) || 0,
+        odometer: odoNum,
+        insuranceDate: insuranceDate
       });
     } else {
       onDataChange(null);
     }
-  }, [vehicleData, selectedVariant, selectedOdometer]);
+  }, [vehicleData, selectedVariant, purchasePrice, odometer, insuranceDate, hypothecation]);
 
   const formatPlate = (raw: string) => {
     const v = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -93,23 +100,19 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
     if (data) {
       setVehicleData(data);
       setSelectedVariant(data.variants[0]);
-      setSelectedOdometer('lt30');
+      setHypothecation(data.hypothecation);
     } else {
       const fallback = vehicleType === '2W'
         ? { make: 'Royal Enfield', model: 'Classic 350', fuelType: 'Petrol', year: 2021, hypothecation: 'Clear' as const, color: 'Stealth Black', engineCC: 349, variants: ['Signals', 'Redditch', 'Halcyon', 'Dark'] }
         : { make: 'Hyundai', model: 'Creta', fuelType: 'Petrol', year: 2021, hypothecation: 'Clear' as const, color: 'Phantom Black', engineCC: 1497, variants: ['E', 'EX', 'S', 'SX', 'SX(O)'] };
       setVehicleData(fallback);
       setSelectedVariant(fallback.variants[1]);
-      setSelectedOdometer('30-60');
+      setHypothecation(fallback.hypothecation);
     }
   };
 
-  const loanEstimate = vehicleData
-    ? Math.round(
-        (vehicleData.year >= 2022 ? 900000 : vehicleData.year >= 2019 ? 700000 : 500000) *
-          (selectedOdometer === 'lt30' ? 0.85 : selectedOdometer === '30-60' ? 0.70 : 0.55)
-      )
-    : 0;
+  const priceNum = parseInt(purchasePrice.replace(/\D/g, '')) || 0;
+  const loanEstimate = Math.round(priceNum * 0.85);
 
   return (
     <div className="space-y-5 font-sans" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
@@ -244,11 +247,11 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
                 <span className="text-[11px] font-bold text-theme-primary tracking-widest uppercase">Vehicle Identified</span>
               </div>
               <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded border uppercase ${
-                vehicleData.hypothecation === 'Clear'
+                hypothecation === 'Clear'
                   ? 'bg-theme-accent/10 border-theme-accent/30 text-theme-accent'
                   : 'bg-amber-900/10 border-amber-900/30 text-amber-500'
               }`}>
-                {vehicleData.hypothecation === 'Clear' ? 'HYP. CLEAR' : 'HYP. ACTIVE'}
+                {hypothecation === 'Clear' ? 'HYP. CLEAR' : 'HYP. ACTIVE'}
               </span>
             </div>
 
@@ -272,49 +275,91 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
                 ))}
               </div>
 
-              <div className="space-y-4 pt-2 border-t border-theme-border">
-                <div>
-                  <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
-                    Exact Trim / Variant
-                  </label>
-                  <select
-                    id="variant-override"
-                    value={selectedVariant}
-                    onChange={e => setSelectedVariant(e.target.value)}
-                    className="w-full bg-theme-elevated border border-theme-border focus:border-theme-primary text-theme-primary text-xs font-bold px-3 py-3 rounded focus:outline-none transition-colors"
-                  >
-                    {vehicleData.variants.map(v => (
-                      <option key={v} value={v} className="bg-theme-elevated">{v}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-4 pt-4 border-t border-theme-border">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Trim/Variant */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
+                      Exact Trim / Variant
+                    </label>
+                    <select
+                      id="variant-override"
+                      value={selectedVariant}
+                      onChange={e => setSelectedVariant(e.target.value)}
+                      className="w-full bg-theme-elevated border border-theme-border focus:border-theme-primary text-theme-primary text-xs font-bold px-3 py-3 rounded focus:outline-none transition-colors"
+                    >
+                      {vehicleData.variants.map(v => (
+                        <option key={v} value={v} className="bg-theme-elevated">{v}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
-                    Odometer Range
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ODOMETER_OPTIONS.map(opt => (
-                      <button
-                        key={opt.id}
-                        id={`odo-${opt.id}`}
-                        onClick={() => setSelectedOdometer(opt.id)}
-                        className={`py-3 text-[10px] font-bold tracking-wider uppercase rounded border transition-colors duration-200 ${
-                          selectedOdometer === opt.id
-                            ? 'bg-theme-elevated border-theme-primary text-theme-primary'
-                            : 'bg-theme-elevated border-theme-border text-theme-secondary hover:border-theme-muted'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                  {/* Agreed Purchase Price */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
+                      Agreed Purchase Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-theme-secondary pointer-events-none">₹</span>
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={purchasePrice}
+                        onChange={(e) => setPurchasePrice(e.target.value.replace(/\D/g, ''))}
+                        placeholder="e.g. 150000"
+                        className="w-full bg-theme-elevated border border-theme-border text-theme-primary font-medium text-xs pl-8 pr-4 py-3 rounded focus:outline-none focus:border-theme-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Odometer Reading */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
+                      Odometer Reading (KM)
+                    </label>
+                    <input 
+                      type="text"
+                      inputMode="numeric"
+                      value={odometer}
+                      onChange={(e) => setOdometer(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 24500"
+                      className="w-full bg-theme-elevated border border-theme-border text-theme-primary font-medium text-xs px-4 py-3 rounded focus:outline-none focus:border-theme-primary transition-colors"
+                    />
+                  </div>
+
+                  {/* Insurance Valid Till */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
+                      Insurance Valid Till
+                    </label>
+                    <input 
+                      type="date"
+                      value={insuranceDate}
+                      onChange={(e) => setInsuranceDate(e.target.value)}
+                      className="w-full bg-theme-elevated border border-theme-border text-theme-primary font-medium text-xs px-4 py-3 rounded focus:outline-none focus:border-theme-primary transition-colors"
+                    />
+                  </div>
+
+                  {/* Hypothecation Status (Editable) */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-theme-secondary uppercase tracking-widest mb-2 font-mono">
+                      Hypothecation Status
+                    </label>
+                    <select
+                      value={hypothecation}
+                      onChange={(e) => setHypothecation(e.target.value as 'Clear' | 'Active')}
+                      className="w-full bg-theme-elevated border border-theme-border text-theme-primary font-medium text-xs px-4 py-3 rounded focus:outline-none focus:border-theme-primary transition-colors"
+                    >
+                      <option value="Clear">Clear</option>
+                      <option value="Active">Active</option>
+                    </select>
                   </div>
                 </div>
               </div>
 
               {/* Loan estimate */}
               <AnimatePresence>
-                {selectedOdometer && (
+                {purchasePrice && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -325,7 +370,7 @@ function UsedVehicleForm({ vehicleType, onReady, onDataChange }: {
                       <p className="text-2xl font-bold font-mono text-theme-primary mt-1">
                         {formatINR(loanEstimate)}
                       </p>
-                      <p className="text-[10px] text-theme-secondary mt-1 font-mono">Based on market valuation</p>
+                      <p className="text-[10px] text-theme-secondary mt-1 font-mono">Based on 85% LTV</p>
                     </div>
                     <div className="text-right">
                       <div className="w-10 h-10 rounded border border-theme-accent/30 bg-theme-accent/10 flex items-center justify-center mb-1 ml-auto">

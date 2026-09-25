@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Clock, Tag } from 'lucide-react';
+import { ArrowRight, Clock, Tag, ArrowLeft } from 'lucide-react';
 
 type VehicleType = '2W' | '4W';
 type Condition = 'used' | 'new';
@@ -9,6 +9,7 @@ interface Step1AssetCategoryProps {
   onContinue: (vehicleType: VehicleType, condition: Condition) => void;
   initialVehicleType?: VehicleType;
   initialCondition?: Condition;
+  onBack: () => void;
 }
 
 const VEHICLE_CARDS: {
@@ -57,6 +58,7 @@ export default function Step1AssetCategory({
   onContinue,
   initialVehicleType = '4W',
   initialCondition = 'new',
+  onBack,
 }: Step1AssetCategoryProps) {
   const [vehicleType, setVehicleType] = useState<VehicleType>(initialVehicleType);
   const [condition, setCondition] = useState<Condition>(initialCondition);
@@ -236,6 +238,19 @@ export default function Step1AssetCategory({
         Continue to Vehicle Details
         <ArrowRight size={17} />
       </motion.button>
+
+      {/* Back button */}
+      <div className="border-t border-theme-border pt-6 mt-6">
+        <motion.button
+          onClick={onBack}
+          whileHover={{ x: -2 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex items-center gap-2 text-[10px] font-bold font-mono text-theme-secondary hover:text-theme-primary uppercase tracking-widest transition-colors"
+        >
+          <ArrowLeft size={12} />
+          Back to Dashboard
+        </motion.button>
+      </div>
     </motion.div>
   );
 }

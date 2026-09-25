@@ -12,6 +12,9 @@ export interface UsedVehicleData {
   hypothecation: 'Clear' | 'Active';
   variant: string;
   odometerBand: 'lt30' | '30-60' | 'gt60';
+  purchasePrice?: number;
+  odometer?: number;
+  insuranceDate?: string;
 }
 
 export interface NewVehicleData {

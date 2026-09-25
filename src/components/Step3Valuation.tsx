@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, ArrowRight, TrendingDown, Shield,
+  ArrowLeft, ArrowRight, Shield,
   AlertTriangle, CheckCircle2, Clock, Percent,
   Car, Zap, Info
 } from 'lucide-react';
@@ -42,7 +42,10 @@ function getDepreciationRate(age: number): number {
 
 function getBaseMarketValue(vehicleData: VehicleData, vehicleType: VehicleType): number {
   if (vehicleData.kind === 'new') return vehicleData.onRoad;
-  // Estimated new price based on make/class then depreciate
+  
+  if (vehicleData.purchasePrice) return vehicleData.purchasePrice;
+
+  // Estimated new price based on make/class then depreciate (fallback)
   const newPriceEstimate = vehicleType === '2W' ? 220000 : 1400000;
   const age = new Date().getFullYear() - vehicleData.year;
   const depRate = getDepreciationRate(age);
@@ -182,9 +185,11 @@ export default function Step3Valuation({ vehicleType, condition, vehicleData, on
             <>
               <InfoPill label="Hypothecation" value={vehicleData.hypothecation} accent={vehicleData.hypothecation === 'Clear'} />
               <InfoPill label="Odometer" value={
-                vehicleData.odometerBand === 'lt30' ? '< 30k km'
-                : vehicleData.odometerBand === '30-60' ? '30k–60k km'
-                : '60k+ km'
+                vehicleData.odometer 
+                  ? `${vehicleData.odometer.toLocaleString('en-IN')} km`
+                  : vehicleData.odometerBand === 'lt30' ? '< 30k km'
+                  : vehicleData.odometerBand === '30-60' ? '30k–60k km'
+                  : '60k+ km'
               } />
             </>
           ) : (
@@ -214,27 +219,19 @@ export default function Step3Valuation({ vehicleType, condition, vehicleData, on
           {/* Base market value */}
           <div className="pb-5 mb-2 border-b border-theme-border">
             <p className="text-[10px] font-bold text-theme-secondary uppercase tracking-widest font-mono mb-2">
-              {isUsed ? 'Assessed Market Value' : 'Verified On-Road Price'}
+              {isUsed ? 'Agreed Purchase Price' : 'Verified On-Road Price'}
             </p>
             <p className="text-3xl font-bold font-mono text-theme-primary">
               {formatINR(valuation.baseValue)}
             </p>
             {isUsed && (
               <p className="text-[10px] font-mono text-theme-secondary mt-1.5 uppercase tracking-wide">
-                Based on current secondary market · {new Date().getFullYear()} pricing
+                Based on agreed purchase price
               </p>
             )}
           </div>
 
           {/* Rule rows */}
-          {isUsed && (
-            <RuleRow
-              icon={TrendingDown}
-              label="Depreciation Applied"
-              value={`${(valuation.depreciationRate * 100).toFixed(0)}%`}
-              sub={`Vehicle age: ${valuation.vehicleAge} year${valuation.vehicleAge !== 1 ? 's' : ''} · Straight-line method`}
-            />
-          )}
 
           <RuleRow
             icon={Percent}
@@ -266,7 +263,7 @@ export default function Step3Valuation({ vehicleType, condition, vehicleData, on
             icon={Shield}
             label="Max Financing Available"
             value={formatINR(valuation.maxLoanAmount)}
-            sub={`${(valuation.maxLTV * 100).toFixed(0)}% of ${isUsed ? 'assessed value' : 'on-road price'}`}
+            sub={`${(valuation.maxLTV * 100).toFixed(0)}% of ${isUsed ? 'purchase price' : 'on-road price'}`}
           />
         </div>
 

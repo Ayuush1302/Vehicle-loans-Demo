@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, Phone, Calendar, CreditCard, Shield,
+  User, Phone, CreditCard, Shield,
   AlertCircle, ArrowRight,
-  Zap, Building2, Check, ExternalLink
+  Zap, Building2, Check, ExternalLink, Hash
 } from 'lucide-react';
 
 interface OnboardingGateProps {
@@ -11,7 +11,7 @@ interface OnboardingGateProps {
 }
 
 const VERIFY_STEPS = [
-  { label: 'Validating PAN with NSDL...', duration: 700 },
+  { label: 'Fetching KYC from UIDAI/CKYC...', duration: 700 },
   { label: 'Initiating Soft Credit Pull...', duration: 800 },
 ];
 
@@ -19,10 +19,10 @@ function formatPAN(raw: string) {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
 }
 
-function formatDOB(raw: string) {
-  const v = raw.replace(/\D/g, '');
-  if (v.length >= 5) return `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4, 8)}`;
-  if (v.length >= 3) return `${v.slice(0, 2)}/${v.slice(2, 4)}`;
+function formatAadhaar(raw: string) {
+  const v = raw.replace(/\D/g, '').slice(0, 12);
+  if (v.length > 8) return `${v.slice(0, 4)} ${v.slice(4, 8)} ${v.slice(8)}`;
+  if (v.length > 4) return `${v.slice(0, 4)} ${v.slice(4)}`;
   return v;
 }
 
@@ -30,12 +30,12 @@ function validateMobile(m: string) {
   return /^[6-9]\d{9}$/.test(m);
 }
 
-function validateDOB(d: string) {
-  return /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/.test(d);
-}
-
 function validatePAN(p: string) {
   return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(p);
+}
+
+function validateAadhaar(a: string) {
+  return a.replace(/\D/g, '').length === 12;
 }
 
 // ── Shared UI Components ──────────────────────────────────────────
@@ -249,39 +249,58 @@ function OTPModal({ mobile, onVerified, onClose }: { mobile: string; onVerified:
 // ── Main Page ──────────────────────────────────────────────────
 
 export default function OnboardingGate({ onSuccess }: OnboardingGateProps) {
-  const [name, setName] = useState('');
+  const [step, setStep] = useState<1 | 2>(1);
+  
+  // Step 1
   const [mobile, setMobile] = useState('');
-  const [dob, setDob] = useState('');
+  const [consent1, setConsent1] = useState(false);
+  const [errors1, setErrors1] = useState<Record<string, string>>({});
+  
+  // Step 2
+  const [name, setName] = useState('');
   const [pan, setPan] = useState('');
-  const [consent, setConsent] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [aadhaar, setAadhaar] = useState('');
+  const [consent2, setConsent2] = useState(false);
+  const [errors2, setErrors2] = useState<Record<string, string>>({});
   
   const [showLoader, setShowLoader] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
 
-  const validate = () => {
+  const validateStep1 = () => {
     const e: Record<string, string> = {};
-    if (!name.trim() || name.trim().split(' ').length < 2) e.name = 'Enter full name as on PAN.';
     if (!validateMobile(mobile)) e.mobile = 'Enter valid 10-digit mobile.';
-    if (!validateDOB(dob)) e.dob = 'Use DD/MM/YYYY format.';
-    if (!validatePAN(pan)) e.pan = 'Invalid PAN format.';
-    if (!consent) e.consent = 'Required.';
-    setErrors(e);
+    if (!consent1) e.consent1 = 'Required.';
+    setErrors1(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validate()) return;
-    setShowLoader(true);
+  const validateStep2 = () => {
+    const e: Record<string, string> = {};
+    if (!name.trim() || name.trim().split(' ').length < 2) e.name = 'Enter full name as on PAN.';
+    if (!validatePAN(pan)) e.pan = 'Invalid PAN format.';
+    if (!validateAadhaar(aadhaar)) e.aadhaar = 'Enter valid 12-digit Aadhaar.';
+    if (!consent2) e.consent2 = 'Required.';
+    setErrors2(e);
+    return Object.keys(e).length === 0;
   };
 
-  const handleLoaderDone = () => {
-    setShowLoader(false);
+  const handleStep1Submit = () => {
+    if (!validateStep1()) return;
     setShowOTP(true);
   };
 
   const handleOTPVerified = () => {
     setShowOTP(false);
+    setStep(2);
+  };
+
+  const handleStep2Submit = () => {
+    if (!validateStep2()) return;
+    setShowLoader(true);
+  };
+
+  const handleLoaderDone = () => {
+    setShowLoader(false);
     onSuccess({ name: name.trim(), pan });
   };
 
@@ -321,85 +340,131 @@ export default function OnboardingGate({ onSuccess }: OnboardingGateProps) {
           <div className="lg:col-span-7 xl:col-span-8">
             <div className="mb-10">
               <div className="inline-flex items-center gap-2 text-[10px] font-bold tracking-widest text-theme-secondary uppercase mb-4 font-mono">
-                <span>STEP 01 / 03</span>
+                <span>STEP 0{step} / 03</span>
                 <span className="w-8 h-px bg-theme-border" />
-                <span className="text-theme-primary">Identity Verification</span>
+                <span className="text-theme-primary">{step === 1 ? 'Mobile Verification' : 'Identity Verification'}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-theme-primary">
-                Verify Your Identity
+                {step === 1 ? 'Get Started' : 'Verify Your Identity'}
               </h1>
               <p className="text-sm text-theme-secondary leading-relaxed max-w-xl">
-                Crux queries RBI-authorized credit bureaus to fetch pre-approved auto loan terms with zero impact on your credit score.
+                {step === 1 
+                  ? 'Enter your mobile number to begin your vehicle loan application securely.'
+                  : 'Crux queries RBI-authorized credit bureaus to fetch pre-approved auto loan terms with zero impact on your credit score.'}
               </p>
             </div>
 
-            <div className="bg-theme-card border border-theme-border rounded-2xl p-6 md:p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-                <div className="md:col-span-2">
-                  <InputField
-                    id="full-name" label="Full Name" icon={User}
-                    value={name} onChange={setName}
-                    placeholder="As per PAN Card" error={errors.name}
-                    hint="Must match official government tax records"
-                  />
-                </div>
-                
-                <InputField
-                  id="mobile" label="Mobile Number" icon={Phone} prefix="+91"
-                  value={mobile} onChange={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="98765 43210" maxLength={10} type="tel"
-                  error={errors.mobile} hint="SMS OTP will be sent here"
-                />
-                
-                <InputField
-                  id="dob" label="Date of Birth" icon={Calendar}
-                  value={dob} onChange={(v) => setDob(formatDOB(v))}
-                  placeholder="DD/MM/YYYY" maxLength={10}
-                  error={errors.dob}
-                />
-
-                <div className="md:col-span-2">
-                  <InputField
-                    id="pan" label="Permanent Account Number (PAN)" icon={CreditCard}
-                    value={pan} onChange={(v) => setPan(formatPAN(v))}
-                    placeholder="ABCDE1234F" maxLength={10} monospace
-                    error={errors.pan}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-theme-border">
-                <label className="flex items-start gap-4 cursor-pointer group">
-                  <div className="relative flex-shrink-0 mt-0.5">
-                    <input type="checkbox" className="sr-only" checked={consent} onChange={(e) => { setConsent(e.target.checked); if(e.target.checked) setErrors(p => ({...p, consent: ''})); }} />
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${consent ? 'bg-theme-accent border-theme-accent' : errors.consent ? 'bg-red-950/20 border-red-500' : 'bg-theme-elevated border-theme-muted group-hover:border-theme-primary'}`}>
-                      {consent && <Check size={12} className="text-theme-primary" />}
+            <div className="bg-theme-card border border-theme-border rounded-2xl p-6 md:p-8 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {step === 1 ? (
+                  // --- STEP 1 FORM ---
+                  <motion.div 
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }} 
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <div className="max-w-md">
+                      <InputField
+                        id="mobile" label="Mobile Number" icon={Phone} prefix="+91"
+                        value={mobile} onChange={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="98765 43210" maxLength={10} type="tel"
+                        error={errors1.mobile} hint="SMS OTP will be sent here"
+                      />
                     </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-theme-secondary leading-relaxed">
-                      I hereby authorize Crux Auto Finance and its lending partners to pull my credit information report from CIBIL, Experian, and CRIF High Mark in accordance with the Credit Information Companies (Regulation) Act, 2005.
-                    </p>
-                    <div className="flex gap-4 mt-2">
-                      <a href="#" className="text-[11px] font-semibold text-theme-primary hover:underline flex items-center gap-1">Full Bureau Terms <ExternalLink size={10}/></a>
-                      <a href="#" className="text-[11px] font-semibold text-theme-primary hover:underline flex items-center gap-1">Data Privacy <ExternalLink size={10}/></a>
+                    
+                    <div className="mt-6 pt-6 border-t border-theme-border">
+                      <label className="flex items-start gap-4 cursor-pointer group">
+                        <div className="relative flex-shrink-0 mt-0.5">
+                          <input type="checkbox" className="sr-only" checked={consent1} onChange={(e) => { setConsent1(e.target.checked); if(e.target.checked) setErrors1(p => ({...p, consent1: ''})); }} />
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${consent1 ? 'bg-theme-accent border-theme-accent' : errors1.consent1 ? 'bg-red-950/20 border-red-500' : 'bg-theme-elevated border-theme-muted group-hover:border-theme-primary'}`}>
+                            {consent1 && <Check size={12} className="text-theme-primary" />}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-theme-secondary leading-relaxed">
+                            I agree to the terms and conditions and privacy policy. I consent to receiving communication via SMS and WhatsApp.
+                          </p>
+                        </div>
+                      </label>
                     </div>
-                  </div>
-                </label>
-              </div>
 
-              <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
-                <button
-                  onClick={handleSubmit}
-                  className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-theme-accent hover:bg-[#256639] text-theme-primary font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  Verify &amp; Continue <ArrowRight size={16} />
-                </button>
-                <div className="flex items-center gap-2 text-xs font-semibold text-theme-secondary">
-                  <Shield size={14} className="text-theme-accent" />
-                  Soft pull only • Won't affect credit score
-                </div>
-              </div>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
+                      <button
+                        onClick={handleStep1Submit}
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-theme-accent hover:bg-[#256639] text-theme-primary font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                      >
+                        Send OTP <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  // --- STEP 2 FORM ---
+                  <motion.div 
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }} 
+                    animate={{ opacity: 1, x: 0 }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                      <div className="md:col-span-2">
+                        <InputField
+                          id="full-name" label="Full Name" icon={User}
+                          value={name} onChange={setName}
+                          placeholder="As per PAN Card" error={errors2.name}
+                          hint="Must match official government tax records"
+                        />
+                      </div>
+                      
+                      <InputField
+                        id="pan" label="Permanent Account Number (PAN)" icon={CreditCard}
+                        value={pan} onChange={(v) => setPan(formatPAN(v))}
+                        placeholder="ABCDE1234F" maxLength={10} monospace
+                        error={errors2.pan}
+                      />
+
+                      <InputField
+                        id="aadhaar" label="Aadhaar Number" icon={Hash}
+                        value={aadhaar} onChange={(v) => setAadhaar(formatAadhaar(v))}
+                        placeholder="1234 5678 9012" maxLength={14} monospace
+                        error={errors2.aadhaar}
+                      />
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-theme-border">
+                      <label className="flex items-start gap-4 cursor-pointer group">
+                        <div className="relative flex-shrink-0 mt-0.5">
+                          <input type="checkbox" className="sr-only" checked={consent2} onChange={(e) => { setConsent2(e.target.checked); if(e.target.checked) setErrors2(p => ({...p, consent2: ''})); }} />
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${consent2 ? 'bg-theme-accent border-theme-accent' : errors2.consent2 ? 'bg-red-950/20 border-red-500' : 'bg-theme-elevated border-theme-muted group-hover:border-theme-primary'}`}>
+                            {consent2 && <Check size={12} className="text-theme-primary" />}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-theme-secondary leading-relaxed">
+                            I consent to fetching my KYC information from CKYC/UIDAI registries. I consent to a credit information pull from Experian/CIBIL to determine eligibility.
+                          </p>
+                          <div className="flex gap-4 mt-2">
+                            <a href="#" className="text-[11px] font-semibold text-theme-primary hover:underline flex items-center gap-1">Full Bureau Terms <ExternalLink size={10}/></a>
+                            <a href="#" className="text-[11px] font-semibold text-theme-primary hover:underline flex items-center gap-1">Data Privacy <ExternalLink size={10}/></a>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
+                      <button
+                        onClick={handleStep2Submit}
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-theme-accent hover:bg-[#256639] text-theme-primary font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                      >
+                        Verify &amp; Continue <ArrowRight size={16} />
+                      </button>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-theme-secondary">
+                        <Shield size={14} className="text-theme-accent" />
+                        Soft pull only • Won't affect credit score
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
